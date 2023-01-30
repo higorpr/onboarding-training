@@ -1,6 +1,5 @@
 import { prisma } from "@/config";
-import { Enrollment, Ticket, TicketType } from "@prisma/client";
-import { type } from "os";
+import { Ticket, TicketType } from "@prisma/client";
 
 export type TicketOutput = Ticket & { TicketType: TicketType };
 
