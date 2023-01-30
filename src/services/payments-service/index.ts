@@ -31,10 +31,36 @@ async function matchingTicketToUser(
   return true;
 }
 
+async function createPaymentEntry(
+  ticketId: number,
+  cardIssuer: string,
+  cardNumber: number,
+): Promise<void> {
+  const valueResponse = await paymentsRepository.getTicketPrice(ticketId);
+  const value = valueResponse.TicketType.price;
+
+  const cardLastDigits = cardNumber.toString().slice(-4);
+
+  await paymentsRepository.createPayment(
+    ticketId,
+    value,
+    cardIssuer,
+    cardLastDigits,
+  );
+
+  await paymentsRepository.payTicket(ticketId);
+}
+
+async function getLastPayment(ticketId: number) {
+  return await paymentsRepository.getPayment(ticketId);
+}
+
 const paymentsService = {
   getTicketPaymentInfo,
   ticketExists,
   matchingTicketToUser,
+  createPaymentEntry,
+  getLastPayment,
 };
 
 export default paymentsService;

@@ -31,7 +31,16 @@ export async function getTicketInfo(req: AuthenticatedRequest, res: Response) {
 }
 
 export async function newPayment(req: AuthenticatedRequest, res: Response) {
-  const paymentInfo = req.body;
+  const paymentInfo = req.body as {
+    ticketId: number;
+    cardData: {
+      issuer: string;
+      number: number;
+      name: string;
+      expirationDate: Date;
+      cvv: number;
+    };
+  };
   const ticketId = Number(paymentInfo.ticketId);
   const userId = req.userId;
 
@@ -50,6 +59,16 @@ export async function newPayment(req: AuthenticatedRequest, res: Response) {
     if (!userTicketOk) {
       return res.sendStatus(401);
     }
+
+    await paymentsService.createPaymentEntry(
+      ticketId,
+      paymentInfo.cardData.issuer,
+      paymentInfo.cardData.number,
+    );
+
+    const paymentResponse = await paymentsService.getLastPayment(ticketId);
+
+    return res.status(200).send(paymentResponse);
   } catch (err) {
     return res.sendStatus(500);
   }
