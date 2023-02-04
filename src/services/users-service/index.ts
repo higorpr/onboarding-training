@@ -6,35 +6,35 @@ import eventsService from "../events-service";
 import { duplicatedEmailError } from "./errors";
 
 export async function createUser({ email, password }: CreateUserParams): Promise<User> {
-  await canEnrollOrFail();
+    await canEnrollOrFail();
 
-  await validateUniqueEmailOrFail(email);
+    await validateUniqueEmailOrFail(email);
 
-  const hashedPassword = await bcrypt.hash(password, 12);
-  return userRepository.create({
-    email,
-    password: hashedPassword,
-  });
+    const hashedPassword = await bcrypt.hash(password, 12);
+    return userRepository.create({
+        email,
+        password: hashedPassword,
+    });
 }
 
 async function validateUniqueEmailOrFail(email: string) {
-  const userWithSameEmail = await userRepository.findByEmail(email);
-  if (userWithSameEmail) {
-    throw duplicatedEmailError();
-  }
+    const userWithSameEmail = await userRepository.findByEmail(email);
+    if (userWithSameEmail) {
+        throw duplicatedEmailError();
+    }
 }
 
 async function canEnrollOrFail() {
-  const canEnroll = await eventsService.isCurrentEventActive();
-  if (!canEnroll) {
-    throw cannotEnrollBeforeStartDateError();
-  }
+    const canEnroll = await eventsService.isCurrentEventActive();
+    if (!canEnroll) {
+        throw cannotEnrollBeforeStartDateError();
+    }
 }
 
 export type CreateUserParams = Pick<User, "email" | "password">;
 
 const userService = {
-  createUser,
+    createUser,
 };
 
 export * from "./errors";

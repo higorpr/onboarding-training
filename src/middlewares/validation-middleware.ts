@@ -4,42 +4,42 @@ import httpStatus from "http-status";
 import { ObjectSchema } from "joi";
 
 export function validateBody<T>(schema: ObjectSchema<T>): ValidationMiddleware {
-  return validate(schema, "body");
+    return validate(schema, "body");
 }
 
 export function validateParams<T>(
-  schema: ObjectSchema<T>,
+    schema: ObjectSchema<T>,
 ): ValidationMiddleware {
-  return validate(schema, "params");
+    return validate(schema, "params");
 }
 
 export function validatePaymentData(
-  req: Request,
-  res: Response,
-  next: NextFunction,
+    req: Request,
+    res: Response,
+    next: NextFunction,
 ) {
-  const paymentData = req.body;
+    const paymentData = req.body;
 
-  if (!paymentData.ticketId || !paymentData.cardData) {
-    return res.sendStatus(400);
-  }
-  next();
+    if (!paymentData.ticketId || !paymentData.cardData) {
+        return res.sendStatus(400);
+    }
+    next();
 }
 
 function validate(schema: ObjectSchema, type: "body" | "params") {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const { error } = schema.validate(req[type], {
-      abortEarly: false,
-    });
+    return (req: Request, res: Response, next: NextFunction) => {
+        const { error } = schema.validate(req[type], {
+            abortEarly: false,
+        });
 
-    if (!error) {
-      next();
-    } else {
-      res
-        .status(httpStatus.BAD_REQUEST)
-        .send(invalidDataError(error.details.map((d) => d.message)));
-    }
-  };
+        if (!error) {
+            next();
+        } else {
+            res
+                .status(httpStatus.BAD_REQUEST)
+                .send(invalidDataError(error.details.map((d) => d.message)));
+        }
+    };
 }
 
 type ValidationMiddleware = (
