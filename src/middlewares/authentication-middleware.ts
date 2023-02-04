@@ -5,37 +5,48 @@ import * as jwt from "jsonwebtoken";
 import { unauthorizedError } from "@/errors";
 import { prisma } from "@/config";
 
-export async function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const authHeader = req.header("Authorization");
-  if (!authHeader) return generateUnauthorizedResponse(res);
+export async function authenticateToken(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+) {
+    const authHeader = req.header("Authorization");
+    if (!authHeader) return generateUnauthorizedResponse(res);
 
-  const token = authHeader.split(" ")[1];
-  if (!token) return generateUnauthorizedResponse(res);
+    const token = authHeader.split(" ")[1];
+    if (!token) return generateUnauthorizedResponse(res);
 
-  try {
-    const { userId } = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+    try {
+        const { userId } = jwt.verify(
+            token,
+            process.env.JWT_SECRET,
+        ) as JWTPayload;
 
-    const session = await prisma.session.findFirst({
-      where: {
-        token,
-      },
-    });
-    if (!session) return generateUnauthorizedResponse(res);
+        const session = await prisma.session.findFirst({
+            where: {
+                token,
+            },
+        });
+        if (!session) return generateUnauthorizedResponse(res);
 
-    req.userId = userId;
-    //TODO mudar aqui
-    return next();
-  } catch (err) {
-    return generateUnauthorizedResponse(res);
-  }
+        req.userId = userId;
+        //TODO mudar aqui
+        return next();
+    } catch (err) {
+        return generateUnauthorizedResponse(res);
+    }
 }
 
 function generateUnauthorizedResponse(res: Response) {
-  res.status(httpStatus.UNAUTHORIZED).send(unauthorizedError());
+    res.status(httpStatus.UNAUTHORIZED).send(unauthorizedError());
 }
 
-export type AuthenticatedRequest = Request & JWTPayload;
+export type AuthenticatedRequest = Request & JWTPayload & hotelPayload;
 
 type JWTPayload = {
-  userId: number;
+    userId: number;
+};
+
+type hotelPayload = {
+    hotelId: number;
 };
