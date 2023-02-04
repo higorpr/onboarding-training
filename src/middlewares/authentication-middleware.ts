@@ -41,12 +41,8 @@ function generateUnauthorizedResponse(res: Response) {
     res.status(httpStatus.UNAUTHORIZED).send(unauthorizedError());
 }
 
-export type AuthenticatedRequest = Request & JWTPayload & hotelPayload;
+export type AuthenticatedRequest = Request & JWTPayload;
 
 type JWTPayload = {
     userId: number;
-};
-
-type hotelPayload = {
-    hotelId: number;
 };
