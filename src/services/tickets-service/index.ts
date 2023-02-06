@@ -13,11 +13,15 @@ async function getTicketTypes() {
 }
 
 async function getTicketByUserId(userId: number) {
-    const enrollment = await enrollmentRepository.findWithAddressByUserId(userId);
+    const enrollment = await enrollmentRepository.findWithAddressByUserId(
+        userId,
+    );
     if (!enrollment) {
         throw notFoundError();
     }
-    const ticket = await ticketRepository.findTicketByEnrollmentId(enrollment.id);
+    const ticket = await ticketRepository.findTicketByEnrollmentId(
+        enrollment.id,
+    );
     if (!ticket) {
         throw notFoundError();
     }
@@ -26,7 +30,9 @@ async function getTicketByUserId(userId: number) {
 }
 
 async function createTicket(userId: number, ticketTypeId: number) {
-    const enrollment = await enrollmentRepository.findWithAddressByUserId(userId);
+    const enrollment = await enrollmentRepository.findWithAddressByUserId(
+        userId,
+    );
     if (!enrollment) {
         throw notFoundError();
     }
@@ -34,12 +40,18 @@ async function createTicket(userId: number, ticketTypeId: number) {
     const ticketData = {
         ticketTypeId,
         enrollmentId: enrollment.id,
-        status: TicketStatus.RESERVED
+        status: TicketStatus.RESERVED,
     };
 
-    await ticketRepository.createTicket(ticketData);
+    try {
+        await ticketRepository.createTicket(ticketData);
+    } catch (err) {
+        console.log(err);
+    }
 
-    const ticket = await ticketRepository.findTicketByEnrollmentId(enrollment.id);
+    const ticket = await ticketRepository.findTicketByEnrollmentId(
+        enrollment.id,
+    );
 
     return ticket;
 }
@@ -47,7 +59,7 @@ async function createTicket(userId: number, ticketTypeId: number) {
 const ticketService = {
     getTicketTypes,
     getTicketByUserId,
-    createTicket
+    createTicket,
 };
 
 export default ticketService;
