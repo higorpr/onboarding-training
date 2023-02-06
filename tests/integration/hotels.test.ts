@@ -14,6 +14,7 @@ import {
     createPayment,
     generateCreditCardData,
 } from "../factories";
+import { createHotelAndRooms } from "../factories/hotels-factory";
 import { cleanDb, generateValidToken } from "../helpers";
 
 beforeAll(async () => {
@@ -58,14 +59,290 @@ describe("GET /hotels", () => {
     });
 
     describe("when token is valid", () => {
-        // Teste 1 - Verificar formato da resposta
-        it("should respond status code 200 and with the array of hotel objects", async () => {
+        it("should respond with status 404 if there is no enrollment for the user ", async () => {
             const token = await generateValidToken();
 
-            await prisma.hotel.create({
+            const response = await server
+                .get("/hotels")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+        it("should respond with status code 404 if there is not a ticket for the enrollmentId of the user", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            await prisma.enrollment.create({
                 data: {
-                    name: "Cosmopolitan Hotel",
-                    image: "https://imgcy.trivago.com/c_fill,d_dummy.jpeg,e_sharpen:60,f_auto,h_627,q_auto,w_1200/itemimages/18/10/1810141_v8.jpeg",
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const response = await server
+                .get("/hotels")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+
+        it("should respond with status code 404 if there is a ticket for the enrollmentId of the user but it does not have the status PAID", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "RESERVED",
+                },
+            });
+
+            const response = await server
+                .get("/hotels")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+
+        it("should respond with status code 404 if there is not a booking belonging to the userId", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const response = await server
+                .get("/hotels")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+        it("should respond with code 404 if ticket is remote", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: true,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const response = await server
+                .get("/hotels")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+        it("should respond with code 404 if ticket does not include hotel", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: false,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const response = await server
+                .get("/hotels")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+        it("should respond with status code 200 and list of hotels if previous conditions are met", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const hotel = await prisma.hotel.create({
+                data: {
+                    name: "Lorem",
+                    image: "http://www.lorem.com.br",
+                    updatedAt: now,
+                },
+            });
+
+            const room = await prisma.room.create({
+                data: {
+                    name: "Lorem2",
+                    capacity: 2,
+                    hotelId: hotel.id,
+                    updatedAt: now,
+                },
+            });
+
+            const booking = await prisma.booking.create({
+                data: {
+                    userId: userId,
+                    roomId: room.id,
+                    updatedAt: now,
                 },
             });
 
@@ -121,103 +398,391 @@ describe("GET /hotels/:hotelId", () => {
     });
 
     describe("when token is valid", () => {
-        // Teste 2 - Verificar se o USUÁRIO existe (token), com uma INSCRIÇÃO VÁLIDA e com TICKET PAGO e que INCLUI HOSPEDAGEM =>
-        // Pegar o userId do token, checar se há um ENROLLMENT.ID com aquele USERID, com um ticket com STATUS "PAID", além
-        // disso, deve haver um booking com o userId.
-        it("should respond with status code 404 if there is not an enrollment for user", async () => {
+        it("should respond with status 404 if there is no enrollment for the user ", async () => {
             const token = await generateValidToken();
 
+            const response = await server
+                .get("/hotels/1")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+        it("should respond with status code 404 if there is not a ticket for the enrollmentId of the user", async () => {
+            const token = await generateValidToken();
             const { userId } = jwt.verify(
                 token,
                 process.env.JWT_SECRET,
             ) as JWTPayload;
 
-            const enrollmentInfo = await prisma.enrollment.findFirst({
-                where: {
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
                     userId: userId,
+                    updatedAt: now,
                 },
             });
-            expect(1).toBe(2);
+
+            const response = await server
+                .get("/hotels/1")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
         });
-        // it(
-        //     "should respond with status code 404 if there is not a paid ticket for the enrollment_id of the user",
-        // );
-        // it(
-        //     "should respond with status code 404 if there is not a booking belonging to the user",
-        // );
+
+        it("should respond with status code 404 if there is a ticket for the enrollmentId of the user but it does not have the status PAID", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "RESERVED",
+                },
+            });
+
+            const response = await server
+                .get("/hotels/1")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+
+        it("should respond with status code 404 if there is not a booking belonging to the userId", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const response = await server
+                .get("/hotels/1")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+        it("should respond with code 404 if ticket is remote", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: true,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const response = await server
+                .get("/hotels/1")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+        it("should respond with code 404 if ticket does not include hotel", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: false,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const response = await server
+                .get("/hotels/1")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(404);
+        });
+
+        it("should respond with status 400 if hotelId does not exist or is not a number", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const hotel = await prisma.hotel.create({
+                data: {
+                    name: "Lorem",
+                    image: "http://www.lorem.com.br",
+                    updatedAt: now,
+                },
+            });
+
+            const room = await prisma.room.create({
+                data: {
+                    name: "Lorem2",
+                    capacity: 2,
+                    hotelId: hotel.id,
+                    updatedAt: now,
+                },
+            });
+
+            const booking = await prisma.booking.create({
+                data: {
+                    userId: userId,
+                    roomId: room.id,
+                    updatedAt: now,
+                },
+            });
+
+            const response = await server
+                .get("/hotels/A")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(400);
+        });
+
+        it("should respond with status code 200 and the hotel with its list of Rooms if previous conditions are met", async () => {
+            const token = await generateValidToken();
+            const { userId } = jwt.verify(
+                token,
+                process.env.JWT_SECRET,
+            ) as JWTPayload;
+
+            const bday = new Date("1989-02-06");
+            const now = new Date();
+
+            const enrollment = await prisma.enrollment.create({
+                data: {
+                    name: "Higor",
+                    cpf: "11897653735",
+                    birthday: bday,
+                    phone: "(21)99724-0416",
+                    userId: userId,
+                    updatedAt: now,
+                },
+            });
+
+            const enrollment_id = enrollment.id;
+
+            const ticketType = await prisma.ticketType.create({
+                data: {
+                    name: "Lorem",
+                    price: 250,
+                    isRemote: false,
+                    includesHotel: true,
+                },
+            });
+
+            await prisma.ticket.create({
+                data: {
+                    ticketTypeId: ticketType.id,
+                    enrollmentId: enrollment_id,
+                    status: "PAID",
+                },
+            });
+
+            const hotel = await prisma.hotel.create({
+                data: {
+                    name: "Lorem",
+                    image: "http://www.lorem.com.br",
+                    updatedAt: now,
+                },
+            });
+
+            const room = await prisma.room.create({
+                data: {
+                    name: "Lorem2",
+                    capacity: 2,
+                    hotelId: hotel.id,
+                    updatedAt: now,
+                },
+            });
+
+            await prisma.booking.create({
+                data: {
+                    userId: userId,
+                    roomId: room.id,
+                    updatedAt: now,
+                },
+            });
+
+            const response = await server
+                .get(`/hotels/${hotel.id}`)
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.statusCode).toBe(200);
+
+            expect(response.body).toEqual(
+                expect.objectContaining({
+                    id: expect.any(Number),
+                    name: expect.any(String),
+                    image: expect.any(String),
+                    createdAt: expect.any(String),
+                    updatedAt: expect.any(String),
+                    Rooms: expect.arrayContaining([
+                        expect.objectContaining({
+                            id: expect.any(Number),
+                            name: expect.any(String),
+                            capacity: expect.any(Number),
+                            hotelId: expect.any(Number),
+                            createdAt: expect.any(String),
+                            updatedAt: expect.any(String),
+                        }),
+                    ]),
+                }),
+            );
+        });
     });
-
-    // it("should respond with status 400 if query param ticketId is missing", async () => {
-    //     const token = await generateValidToken();
-
-    //     const response = await server
-    //         .get("/payments")
-    //         .set("Authorization", `Bearer ${token}`);
-
-    //     expect(response.status).toEqual(httpStatus.BAD_REQUEST);
-    // });
-
-    // it("should respond with status 404 when given ticket doesnt exist", async () => {
-    //     const user = await createUser();
-    //     const token = await generateValidToken(user);
-    //     await createEnrollmentWithAddress(user);
-
-    //     const response = await server
-    //         .get("/payments?ticketId=1")
-    //         .set("Authorization", `Bearer ${token}`);
-
-    //     expect(response.status).toEqual(httpStatus.NOT_FOUND);
-    // });
-
-    // it("should respond with status 401 when user doesnt own given ticket", async () => {
-    //     const user = await createUser();
-    //     const token = await generateValidToken(user);
-    //     await createEnrollmentWithAddress(user);
-    //     const ticketType = await createTicketType();
-
-    //     const otherUser = await createUser();
-    //     const otherUserEnrollment = await createEnrollmentWithAddress(
-    //         otherUser,
-    //     );
-    //     const ticket = await createTicket(
-    //         otherUserEnrollment.id,
-    //         ticketType.id,
-    //         TicketStatus.RESERVED,
-    //     );
-
-    //     const response = await server
-    //         .get(`/payments?ticketId=${ticket.id}`)
-    //         .set("Authorization", `Bearer ${token}`);
-
-    //     expect(response.status).toEqual(httpStatus.UNAUTHORIZED);
-    // });
-
-    // it("should respond with status 200 and with payment data", async () => {
-    //     const user = await createUser();
-    //     const token = await generateValidToken(user);
-    //     const enrollment = await createEnrollmentWithAddress(user);
-    //     const ticketType = await createTicketType();
-    //     const ticket = await createTicket(
-    //         enrollment.id,
-    //         ticketType.id,
-    //         TicketStatus.RESERVED,
-    //     );
-
-    //     const payment = await createPayment(ticket.id, ticketType.price);
-
-    //     const response = await server
-    //         .get(`/payments?ticketId=${ticket.id}`)
-    //         .set("Authorization", `Bearer ${token}`);
-
-    //     expect(response.status).toEqual(httpStatus.OK);
-    //     expect(response.body).toEqual({
-    //         id: expect.any(Number),
-    //         ticketId: ticket.id,
-    //         value: ticketType.price,
-    //         cardIssuer: payment.cardIssuer,
-    //         cardLastDigits: payment.cardLastDigits,
-    //         createdAt: expect.any(String),
-    //         updatedAt: expect.any(String),
-    //     });
-    // });
 });
