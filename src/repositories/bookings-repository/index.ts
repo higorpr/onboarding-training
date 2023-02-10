@@ -57,6 +57,16 @@ async function getTicketInfo(enrollmentId: number): Promise<ticketInfo> {
 
 async function postBooking(userId: number, roomId: number): Promise<Booking> {
     const today = new Date();
+    await prisma.room.update({
+        where: {
+            id: roomId,
+        },
+        data: {
+            capacity: {
+                decrement: 1,
+            },
+        },
+    });
     return await prisma.booking.create({
         data: {
             userId: userId,
