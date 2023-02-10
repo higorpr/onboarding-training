@@ -1,5 +1,5 @@
 import { prisma } from "@/config";
-import { Room } from "@prisma/client";
+import { Booking, Room } from "@prisma/client";
 
 export type BookingInfo = { id: number; Room: Room };
 
@@ -15,6 +15,57 @@ async function getBooking(userId: number): Promise<BookingInfo> {
     });
 }
 
-const bookingsRepository = { getBooking };
+async function getRoom(roomId: number): Promise<Room> {
+    return await prisma.room.findFirst({
+        where: {
+            id: roomId,
+        },
+    });
+}
+
+export type ticketInfo = {
+    isRemote: boolean;
+    includesHotel: boolean;
+    isPaid: boolean;
+};
+
+async function getTicketInfo(enrollmentId: number): Promise<ticketInfo> {
+    const ticket = await prisma.ticket.findFirst({
+        where: {
+            enrollmentId: enrollmentId,
+        },
+    });
+
+    if (!ticket) {
+        return null;
+    }
+
+    const ticketType = await prisma.ticketType.findFirst({
+        where: {
+            id: ticket.ticketTypeId,
+        },
+    });
+
+    const ticketObj = {
+        isRemote: ticketType.isRemote,
+        includesHotel: ticketType.includesHotel,
+        isPaid: ticket.status === "PAID" ? true : false,
+    };
+
+    return ticketObj;
+}
+
+async function postBooking(userId: number, roomId: number): Promise<Booking> {
+    const today = new Date();
+    return await prisma.booking.create({
+        data: {
+            userId: userId,
+            roomId: roomId,
+            updatedAt: today,
+        },
+    });
+}
+
+const bookingsRepository = { getBooking, getRoom, getTicketInfo, postBooking };
 
 export { bookingsRepository };
