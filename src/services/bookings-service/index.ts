@@ -11,6 +11,11 @@ async function getBooking(userId: number): Promise<BookingInfo> {
     return booking;
 }
 
+async function getBookingByBookingId(bookingId: number): Promise<Booking> {
+    const booking = await bookingsRepository.getBookingByBookingId(bookingId);
+    return booking;
+}
+
 async function checkRoomAvailability(roomId: number): Promise<void> {
     const roomInfo = await bookingsRepository.getRoom(roomId);
     if (!roomInfo) {
@@ -51,11 +56,34 @@ async function postBooking(userId: number, roomId: number): Promise<Booking> {
     return booking;
 }
 
+async function checkUpdateBusinessRule(userId: number): Promise<void> {
+    const booking = await bookingsRepository.retrieveBooking(userId);
+    if (!booking) {
+        throw businessRuleError();
+    }
+}
+
+async function updateBooking(
+    bookingId: number,
+    oldRoomId: number,
+    newRoomId: number,
+): Promise<number> {
+    const booking = await bookingsRepository.updateBooking(
+        bookingId,
+        oldRoomId,
+        newRoomId,
+    );
+    return booking.id;
+}
+
 const bookingsService = {
     getBooking,
     checkRoomAvailability,
     checkBusinessRule,
     postBooking,
+    checkUpdateBusinessRule,
+    updateBooking,
+    getBookingByBookingId,
 };
 
 export { bookingsService };

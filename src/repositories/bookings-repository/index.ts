@@ -15,6 +15,14 @@ async function getBooking(userId: number): Promise<BookingInfo> {
     });
 }
 
+async function getBookingByBookingId(bookingId: number): Promise<Booking> {
+    return await prisma.booking.findFirst({
+        where: {
+            id: bookingId,
+        },
+    });
+}
+
 async function getRoom(roomId: number): Promise<Room> {
     return await prisma.room.findFirst({
         where: {
@@ -76,6 +84,73 @@ async function postBooking(userId: number, roomId: number): Promise<Booking> {
     });
 }
 
-const bookingsRepository = { getBooking, getRoom, getTicketInfo, postBooking };
+async function retrieveBooking(userId: number): Promise<Booking> {
+    const booking = await prisma.booking.findFirst({
+        where: {
+            userId: userId,
+        },
+    });
+    return booking;
+}
+
+async function updateBooking(
+    bookingId: number,
+    oldroomId: number,
+    newRoomId: number,
+): Promise<Booking> {
+    const today = new Date();
+
+    await prisma.booking.update({
+        where: {
+            id: bookingId,
+        },
+        data: {
+            roomId: newRoomId,
+            updatedAt: today,
+        },
+    });
+
+    await prisma.room.update({
+        where: {
+            id: oldroomId,
+        },
+        data: {
+            capacity: {
+                increment: 1,
+            },
+            updatedAt: today,
+        },
+    });
+
+    await prisma.room.update({
+        where: {
+            id: newRoomId,
+        },
+        data: {
+            capacity: {
+                decrement: 1,
+            },
+            updatedAt: today,
+        },
+    });
+
+    const booking = await prisma.booking.findFirst({
+        where: {
+            roomId: newRoomId,
+        },
+    });
+
+    return booking;
+}
+
+const bookingsRepository = {
+    getBooking,
+    getRoom,
+    getTicketInfo,
+    postBooking,
+    retrieveBooking,
+    updateBooking,
+    getBookingByBookingId,
+};
 
 export { bookingsRepository };
