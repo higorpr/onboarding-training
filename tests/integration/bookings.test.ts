@@ -347,7 +347,7 @@ describe("PUT /booking", () => {
                 bookingId: expect.any(Number),
             });
         });
-        it("should return status code 404 when roomId sent on body is non-existant", async () => {
+        it("should return status code 409 when user tries to change to same room ", async () => {
             // create user and valid session
             const user = await createUser();
             const token = await generateValidToken(user);
@@ -360,12 +360,39 @@ describe("PUT /booking", () => {
             const oldBooking = await createBooking(user.id, room1.id);
 
             // test
+            const body = { roomId: room1.id };
+            const response = await server
+                .put(`/booking/${oldBooking.id}`)
+                .send(body)
+                .set("Authorization", `Bearer ${token}`);
+            expect(response.statusCode).toBe(409);
+        });
+        it("should return status code 404 when roomId sent on body is non-existant", async () => {
+            // create user and valid session
+            const user = await createUser();
+            const token = await generateValidToken(user);
+            await createSession(token);
+
+            // create context
+            const hotel = await createHotel();
+            const room1 = await createRoom(hotel.id, 2);
+            const room2 = await createRoom(hotel.id, 2);
+            const oldBooking = await createBooking(user.id, room1.id);
+
+            // tests
             const body = { roomId: 0 };
             const response = await server
                 .put(`/booking/${oldBooking.id}`)
                 .send(body)
                 .set("Authorization", `Bearer ${token}`);
             expect(response.statusCode).toBe(404);
+
+            const body1 = { roomId: 10000 };
+            const response1 = await server
+                .put(`/booking/${oldBooking.id}`)
+                .send(body1)
+                .set("Authorization", `Bearer ${token}`);
+            expect(response1.statusCode).toBe(404);
         });
         it("should return status code 404 when bookingId sent on query parameters is non-existant", async () => {
             // create user and valid session
