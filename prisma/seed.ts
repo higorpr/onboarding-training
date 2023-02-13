@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import dayjs from "dayjs";
 const prisma = new PrismaClient();
 
-async function main() {
+export async function main() {
     let event = await prisma.event.findFirst();
     if (!event) {
         event = await prisma.event.create({
